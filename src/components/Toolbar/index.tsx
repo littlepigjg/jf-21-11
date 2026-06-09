@@ -9,22 +9,52 @@ import {
   Trash2,
   Gauge,
   Sparkles,
+  GitBranch,
+  GitCommit,
+  History,
+  GitMerge,
 } from 'lucide-react';
 import { useEditorStore } from '@/stores/editorStore';
+import { useVCSStore } from '@/stores/vcsStore';
+import { shortenCommitId } from '@/utils/vcs';
 
 export default function Toolbar() {
   const {
     frames,
+    captions,
+    crop,
+    exportConfig,
+    canvasWidth,
+    canvasHeight,
     isPlaying,
     setIsPlaying,
     currentFrameIndex,
     setCurrentFrameIndex,
     setShowImportDialog,
     setShowExportDialog,
+    setShowVCSPanel,
+    setShowCommitDialog,
+    setShowMergeDialog,
     playbackSpeed,
     setPlaybackSpeed,
     clearAll,
   } = useEditorStore();
+  const {
+    currentBranchName,
+    detachedHeadCommitId,
+    hasUncommittedChanges,
+    getBranchCommitCount,
+    isMergeInProgress,
+  } = useVCSStore();
+
+  const hasChanges = hasUncommittedChanges(
+    frames,
+    captions,
+    crop,
+    exportConfig,
+    canvasWidth,
+    canvasHeight
+  );
 
   const handlePrevFrame = () => {
     const newIndex = currentFrameIndex > 0 ? currentFrameIndex - 1 : frames.length - 1;
@@ -86,10 +116,41 @@ export default function Toolbar() {
             }
           }}
           disabled={frames.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors ml-2"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Trash2 className="w-4 h-4" />
           清空
+        </button>
+
+        <div className="w-px h-6 bg-slate-700 mx-2" />
+
+        <button
+          onClick={() => setShowCommitDialog(true)}
+          disabled={frames.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-all hover:shadow-lg hover:shadow-green-500/25 relative"
+        >
+          <GitCommit className="w-4 h-4" />
+          提交
+          {hasChanges && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-yellow-400 border-2 border-slate-900 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setShowMergeDialog(true)}
+          disabled={frames.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <GitMerge className="w-4 h-4" />
+          合并
+        </button>
+
+        <button
+          onClick={() => setShowVCSPanel(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <History className="w-4 h-4" />
+          版本控制
         </button>
       </div>
 
@@ -139,6 +200,28 @@ export default function Toolbar() {
             <option value={4} className="bg-slate-800">4x</option>
           </select>
         </div>
+
+        <button
+          onClick={() => setShowVCSPanel(true)}
+          className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-violet-500/50 hover:bg-slate-700 transition-all group"
+          title="查看分支和提交历史"
+        >
+          <GitBranch className="w-4 h-4 text-violet-400" />
+          <div className="text-left">
+            <div className="text-sm font-mono text-white leading-tight">
+              {detachedHeadCommitId
+                ? `HEAD @ ${shortenCommitId(detachedHeadCommitId)}`
+                : currentBranchName}
+            </div>
+            <div className="text-[10px] text-slate-500 leading-tight">
+              {getBranchCommitCount(currentBranchName)} 次提交
+              {isMergeInProgress && <span className="text-yellow-400 ml-1">· 合并中</span>}
+            </div>
+          </div>
+          {hasChanges && !detachedHeadCommitId && (
+            <span className="w-2 h-2 rounded-full bg-yellow-400 ml-1" title="有未提交的更改" />
+          )}
+        </button>
 
         <div className="text-sm text-slate-400 font-mono">
           {frames.length > 0 ? (

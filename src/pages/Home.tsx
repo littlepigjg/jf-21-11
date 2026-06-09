@@ -4,10 +4,24 @@ import PreviewCanvas from '@/components/PreviewCanvas';
 import PropertyPanel from '@/components/PropertyPanel';
 import ImportDialog from '@/components/ImportDialog';
 import ExportDialog from '@/components/ExportDialog';
+import VCSPanel from '@/components/VCSPanel';
+import CommitDialog from '@/components/CommitDialog';
+import MergeDialog from '@/components/MergeDialog';
 import { useEditorStore } from '@/stores/editorStore';
 
 export default function Home() {
-  const { showImportDialog, showExportDialog, setShowImportDialog, setShowExportDialog } = useEditorStore();
+  const {
+    showImportDialog,
+    showExportDialog,
+    showVCSPanel,
+    showCommitDialog,
+    showMergeDialog,
+    setShowImportDialog,
+    setShowExportDialog,
+    setShowVCSPanel,
+    setShowCommitDialog,
+    setShowMergeDialog,
+  } = useEditorStore();
 
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-950 text-white overflow-hidden">
@@ -19,6 +33,9 @@ export default function Home() {
       </div>
       <ImportDialog open={showImportDialog} onClose={() => setShowImportDialog(false)} />
       <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
+      <VCSPanel />
+      <CommitDialog open={showCommitDialog} onClose={() => setShowCommitDialog(false)} />
+      <MergeDialog open={showMergeDialog} onClose={() => setShowMergeDialog(false)} />
     </div>
   );
 }

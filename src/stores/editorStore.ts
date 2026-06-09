@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import type { Frame, Caption, CropConfig, ExportConfig } from '@/types';
+import type { Frame, Caption, CropConfig, ExportConfig, EditorSnapshot } from '@/types';
 import { generateId, cloneImageData, createBlankImageData } from '@/utils/imageUtils';
+import { editorSnapshotToState } from '@/utils/vcs';
 
 interface EditorStore {
   frames: Frame[];
@@ -15,6 +16,10 @@ interface EditorStore {
   canvasHeight: number;
   showImportDialog: boolean;
   showExportDialog: boolean;
+  showVCSPanel: boolean;
+  showCommitDialog: boolean;
+  showMergeDialog: boolean;
+  mergeSourceBranch: string | null;
 
   setFrames: (frames: Frame[]) => void;
   setSelectedFrameIndex: (index: number) => void;
@@ -23,6 +28,9 @@ interface EditorStore {
   setPlaybackSpeed: (speed: number) => void;
   setShowImportDialog: (show: boolean) => void;
   setShowExportDialog: (show: boolean) => void;
+  setShowVCSPanel: (show: boolean) => void;
+  setShowCommitDialog: (show: boolean) => void;
+  setShowMergeDialog: (show: boolean, sourceBranch?: string) => void;
 
   addFrame: (imageData?: ImageData, afterIndex?: number) => void;
   deleteFrame: (index: number) => void;
@@ -37,6 +45,8 @@ interface EditorStore {
 
   setCrop: (crop: Partial<CropConfig>) => void;
   setExportConfig: (config: Partial<ExportConfig>) => void;
+
+  restoreFromSnapshot: (snapshot: EditorSnapshot) => Promise<void>;
 
   clearAll: () => void;
 }
@@ -72,6 +82,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   canvasHeight: 480,
   showImportDialog: false,
   showExportDialog: false,
+  showVCSPanel: false,
+  showCommitDialog: false,
+  showMergeDialog: false,
+  mergeSourceBranch: null,
 
   setFrames: (frames) => {
     if (frames.length > 0) {
@@ -105,6 +119,36 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
   setShowImportDialog: (show) => set({ showImportDialog: show }),
   setShowExportDialog: (show) => set({ showExportDialog: show }),
+  setShowVCSPanel: (show) => set({ showVCSPanel: show }),
+  setShowCommitDialog: (show) => set({ showCommitDialog: show }),
+  setShowMergeDialog: (show, sourceBranch) => set({
+    showMergeDialog: show,
+    mergeSourceBranch: sourceBranch !== undefined ? sourceBranch : (show ? get().mergeSourceBranch : null),
+  }),
+
+  restoreFromSnapshot: async (snapshot) => {
+    const state = await editorSnapshotToState(snapshot);
+    const exportCfg = get().exportConfig;
+    set({
+      frames: state.frames,
+      captions: state.captions,
+      crop: state.crop,
+      selectedFrameIndex: state.frames.length > 0 ? 0 : -1,
+      currentFrameIndex: 0,
+      canvasWidth: state.canvasWidth,
+      canvasHeight: state.canvasHeight,
+      exportConfig: {
+        ...exportCfg,
+        width: exportCfg.width || state.exportConfig.width || state.canvasWidth,
+        height: exportCfg.height || state.exportConfig.height || state.canvasHeight,
+        colors: state.exportConfig.colors,
+        quality: state.exportConfig.quality,
+        fps: state.exportConfig.fps,
+        dither: state.exportConfig.dither,
+        repeat: state.exportConfig.repeat,
+      },
+    });
+  },
 
   addFrame: (imageData, afterIndex) => {
     const state = get();
